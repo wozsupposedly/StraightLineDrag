@@ -1,0 +1,18 @@
+{
+  "default": {
+    "key": "X",
+    "requireShiftForSnap": true
+  },
+  "darwin": {
+    "key": "X",
+    "requireCommand": true,
+    "requireAlt": true,
+    "requireShiftForSnap": true
+  },
+  "win32": {
+    "key": "X",
+    "requireControl": true,
+    "requireAlt": true,
+    "requireShiftForSnap": true
+  }
+}
