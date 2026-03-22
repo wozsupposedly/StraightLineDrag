@@ -369,7 +369,7 @@ void SimulateDrag(Point start, Point end) {
         start.y + ((end.y - start.y) * t));
     PostMouseEvent(kCGEventLeftMouseDragged, intermediate, previousPoint, eventNumber);
     previousPoint = intermediate;
-    std::this_thread::sleep_for(std::chrono::milliseconds(8));
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
 
   std::this_thread::sleep_for(std::chrono::milliseconds(12));
@@ -617,7 +617,7 @@ void SimulateDrag(Point start, Point end) {
 
   WaitForPhysicalModifierRelease();
   SendAbsoluteMouseInput(MOUSEEVENTF_MOVE, static_cast<LONG>(std::llround(start.x)), static_cast<LONG>(std::llround(start.y)));
-  Sleep(6);
+  Sleep(8);
   SendAbsoluteMouseInput(MOUSEEVENTF_MOVE | MOUSEEVENTF_LEFTDOWN, static_cast<LONG>(std::llround(start.x)),
                          static_cast<LONG>(std::llround(start.y)));
   Sleep(12);
