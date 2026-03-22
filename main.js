@@ -165,6 +165,10 @@ function loadNativeAddon() {
       setTimeout(() => {
         straightDrag.performDrag(startPoint, point);
       }, 45);
+    },
+    hotkeyCancel() {
+      pendingDragStart = null;
+      hideOverlay();
     }
   });
 }

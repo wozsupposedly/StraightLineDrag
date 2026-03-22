@@ -1,3 +1,10 @@
 node_modules/
 dist/
 build/Release/
+out/
+.DS_Store
+bin/.DS_Store
+assets/icon.iconset/
+assets/icon-clean.png
+assets/icon-*.png
+assets/icns-*.png

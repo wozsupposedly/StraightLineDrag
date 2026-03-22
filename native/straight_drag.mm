@@ -48,6 +48,7 @@ HotkeyConfig g_config;
 Napi::ThreadSafeFunction g_hotkeyStartCallback;
 Napi::ThreadSafeFunction g_hotkeyMoveCallback;
 Napi::ThreadSafeFunction g_hotkeyEndCallback;
+Napi::ThreadSafeFunction g_hotkeyCancelCallback;
 
 constexpr int kDragSteps = 24;
 constexpr double kPi = 3.14159265358979323846;
@@ -133,6 +134,16 @@ void EmitPoint(Napi::ThreadSafeFunction& callback, Point point) {
   });
 }
 
+void EmitSignal(Napi::ThreadSafeFunction& callback) {
+  if (!callback) {
+    return;
+  }
+
+  callback.BlockingCall([](Napi::Env, Napi::Function jsCallback) {
+    jsCallback.Call({});
+  });
+}
+
 void ReleaseCallbacks() {
   std::lock_guard<std::mutex> lock(g_callbackMutex);
 
@@ -149,6 +160,11 @@ void ReleaseCallbacks() {
   if (g_hotkeyEndCallback) {
     g_hotkeyEndCallback.Release();
     g_hotkeyEndCallback = Napi::ThreadSafeFunction();
+  }
+
+  if (g_hotkeyCancelCallback) {
+    g_hotkeyCancelCallback.Release();
+    g_hotkeyCancelCallback = Napi::ThreadSafeFunction();
   }
 }
 
@@ -233,6 +249,15 @@ void FinishHotkeyIfReleased() {
     Point endPoint = MaybeSnapPoint(GetMouseLocation(), false);
     g_lastPoint = endPoint;
     EmitPoint(g_hotkeyEndCallback, endPoint);
+  }
+}
+
+void CancelHotkeyGesture() {
+  const bool wasActive = g_hotkeyActive.exchange(false);
+  g_hotkeyKeyDown = false;
+  g_snapLocked = false;
+  if (wasActive) {
+    EmitSignal(g_hotkeyCancelCallback);
   }
 }
 
@@ -390,6 +415,11 @@ CGEventRef EventTapCallback(CGEventTapProxy, CGEventType type, CGEventRef event,
 
   if (type == kCGEventKeyDown) {
     const CGKeyCode keyCode = static_cast<CGKeyCode>(CGEventGetIntegerValueField(event, kCGKeyboardEventKeycode));
+    if (keyCode == 53 && g_hotkeyActive.load()) {
+      CancelHotkeyGesture();
+      return nullptr;
+    }
+
     if (keyCode == KeyCodeForString(g_config.key) &&
         MatchesModifierFlags(CGEventGetFlags(event)) &&
         !g_hotkeyActive.exchange(true)) {
@@ -531,6 +561,15 @@ void FinishHotkeyIfReleased() {
   }
 }
 
+void CancelHotkeyGesture() {
+  const bool wasActive = g_hotkeyActive.exchange(false);
+  g_hotkeyKeyDown = false;
+  g_snapLocked = false;
+  if (wasActive) {
+    EmitSignal(g_hotkeyCancelCallback);
+  }
+}
+
 DWORD VirtualKeyForString(const std::string& key) {
   const std::string normalized = NormalizeKeyName(key);
   if (normalized.empty()) {
@@ -662,6 +701,11 @@ LRESULT CALLBACK KeyboardHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
       g_startPoint = GetMouseLocation();
       g_lastPoint = g_startPoint;
       EmitPoint(g_hotkeyStartCallback, g_startPoint);
+    return 1;
+  }
+
+  if (hookData->vkCode == VK_ESCAPE && isKeyDown && g_hotkeyActive.load()) {
+    CancelHotkeyGesture();
     return 1;
   }
 
@@ -798,6 +842,15 @@ Napi::Value SetCallbacks(const Napi::CallbackInfo& info) {
         1);
   }
 
+  if (callbacks.Has("hotkeyCancel") && callbacks.Get("hotkeyCancel").IsFunction()) {
+    g_hotkeyCancelCallback = Napi::ThreadSafeFunction::New(
+        env,
+        callbacks.Get("hotkeyCancel").As<Napi::Function>(),
+        "hotkeyCancel",
+        0,
+        1);
+  }
+
   return env.Undefined();
 }
 
@@ -876,6 +929,7 @@ Napi::Value StopListening(const Napi::CallbackInfo& info) {
   }
 
   g_hotkeyActive = false;
+  g_hotkeyKeyDown = false;
   g_snapLocked = false;
   StopPlatformListening();
   return Napi::Boolean::New(env, true);

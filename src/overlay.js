@@ -21,13 +21,23 @@ function draw() {
     return;
   }
 
-  context.strokeStyle = 'rgba(255, 255, 255, 1)';
-  context.lineWidth = 2;
-  context.lineCap = 'round';
+  context.strokeStyle = 'rgba(0, 0, 0, 1)';
+  context.lineWidth = 4;
+  context.setLineDash([]);
   context.beginPath();
   context.moveTo(startPoint.x, startPoint.y);
   context.lineTo(currentPoint.x, currentPoint.y);
   context.stroke();
+
+  context.strokeStyle = 'rgba(255, 255, 255, 1)';
+  context.lineWidth = 2;
+  context.lineCap = 'round';
+  context.setLineDash([10, 8]);
+  context.beginPath();
+  context.moveTo(startPoint.x, startPoint.y);
+  context.lineTo(currentPoint.x, currentPoint.y);
+  context.stroke();
+  context.setLineDash([]);
 }
 
 window.addEventListener('resize', resizeCanvas);
